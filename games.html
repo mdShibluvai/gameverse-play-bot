@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GameVerse Play</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --neon-cyan: #00f5ff;
+    --neon-pink: #ff006e;
+    --neon-green: #39ff14;
+    --neon-yellow: #ffff00;
+    --dark-bg: #0a0a0f;
+    --panel-bg: #0d1117;
+    --card-bg: #111827;
+    --glow-cyan: 0 0 20px #00f5ff88;
+    --glow-pink: 0 0 20px #ff006e88;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+
+  body {
+    background: var(--dark-bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: #e0e0e0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, #00f5ff0a 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, #ff006e0a 0%, transparent 60%);
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── MENU SCREEN ── */
+  #menuScreen { padding: 20px 16px; }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    letter-spacing: 2px;
+  }
+
+  .logo-sub {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .game-card {
+    background: var(--card-bg);
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 20px 12px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .game-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, transparent 40%, rgba(0,245,255,0.04));
+    pointer-events: none;
+  }
+
+  .game-card:active { transform: scale(0.95); }
+
+  .game-card.snake   { border-color: #39ff1444; }
+  .game-card.car     { border-color: #ff006e44; }
+  .game-card.jump    { border-color: #00f5ff44; }
+  .game-card.chess   { border-color: #a855f744; }
+  .game-card.ludo    { border-color: #ffff0044; }
+
+  .game-card:hover { transform: translateY(-2px); }
+
+  .game-icon { font-size: 42px; display: block; margin-bottom: 8px; }
+  .game-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .game-card.snake   .game-name { color: var(--neon-green); }
+  .game-card.car     .game-name { color: var(--neon-pink); }
+  .game-card.jump    .game-name { color: var(--neon-cyan); }
+  .game-card.chess   .game-name { color: #c084fc; }
+  .game-card.ludo    .game-name { color: var(--neon-yellow); }
+
+  .game-card.wide { grid-column: 1 / -1; }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen {
+    padding: 0;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--dark-bg);
+  }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: #0d1117ee;
+    border-bottom: 1px solid #1e293b;
+    position: relative;
+    z-index: 10;
+  }
+
+  .btn-back {
+    background: none;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+  .game-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    flex: 1;
+    text-align: center;
+  }
+
+  .score-display {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--neon-cyan);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .game-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  canvas {
+    border: 1px solid #1e3a4a;
+    border-radius: 8px;
+    display: block;
+    max-width: 100%;
+    touch-action: none;
+  }
+
+  /* ── CONTROLS ── */
+  .controls { margin-top: 12px; }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
+    grid-template-rows: repeat(3, 52px);
+    gap: 4px;
+  }
+
+  .dpad-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    color: #e2e8f0;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: var(--neon-cyan);
+    color: #000;
+    border-color: var(--neon-cyan);
+  }
+
+  .dpad-center { grid-column: 2; grid-row: 2; }
+
+  .btn-action {
+    background: linear-gradient(135deg, var(--neon-cyan), #0088ff);
+    border: none;
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    transition: transform 0.1s;
+  }
+  .btn-action:active { transform: scale(0.96); }
+
+  /* ── OVERLAY ── */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: #0009;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 10px;
+  }
+
+  .overlay p { font-size: 16px; color: #94a3b8; margin-bottom: 24px; }
+
+  .overlay .btn-action { margin-top: 0; }
+
+  /* ── CHESS specific ── */
+  .chess-board-wrap { touch-action: none; }
+
+  /* ── LUDO specific ── */
+  #ludoInfo {
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* ── swipe hint ── */
+  .swipe-hint {
+    font-size: 12px;
+    color: #4a5568;
+    text-align: center;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ MENU ══════════════════ -->
+<div id="menuScreen" class="screen active">
+  <div class="logo">GAMEVERSE</div>
+  <div class="logo-sub">Play Now</div>
+
+  <div class="games-grid">
+    <div class="game-card snake" onclick="openGame('snake')">
+      <span class="game-icon">🐍</span>
+      <div class="game-name">Snake</div>
+    </div>
+    <div class="game-card car" onclick="openGame('car')">
+      <span class="game-icon">🏎️</span>
+      <div class="game-name">Car Race</div>
+    </div>
+    <div class="game-card jump" onclick="openGame('jump')">
+      <span class="game-icon">🏀</span>
+      <div class="game-name">Jump Ball</div>
+    </div>
+    <div class="game-card chess" onclick="openGame('chess')">
+      <span class="game-icon">♟️</span>
+      <div class="game-name">Chess</div>
+    </div>
+    <div class="game-card ludo wide" onclick="openGame('ludo')">
+      <span class="game-icon">🎲</span>
+      <div class="game-name">Ludo</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ GAME SCREEN ══════════════════ -->
+<div id="gameScreen" class="screen">
+  <div class="game-header">
+    <button class="btn-back" onclick="goBack()">← Back</button>
+    <div class="game-title" id="gameTitle">GAME</div>
+    <div class="score-display" id="scoreDisplay">0</div>
+  </div>
+  <div class="game-area" id="gameArea">
+    <!-- injected per game -->
+  </div>
+</div>
+
+<script>
+// ─────────────────── TELEGRAM INIT ───────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#0a0a0f');
+}
+
+// ─────────────────── URL PARAM ───────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const startGame = urlParams.get('game');
+if (startGame) openGame(startGame);
+
+// ─────────────────── NAVIGATION ───────────────────
+let currentGame = null;
+
+function openGame(key) {
+  document.getElementById('menuScreen').classList.remove('active');
+  document.getElementById('gameScreen').classList.add('active');
+  currentGame = key;
+  stopAllGames();
+  const titles = { snake:'🐍 SNAKE', car:'🏎️ CAR RACE', jump:'🏀 JUMP BALL', chess:'♟️ CHESS', ludo:'🎲 LUDO' };
+  document.getElementById('gameTitle').textContent = titles[key] || key.toUpperCase();
+  document.getElementById('scoreDisplay').textContent = '0';
+  const area = document.getElementById('gameArea');
+  area.innerHTML = '';
+  if (key === 'snake')  initSnake(area);
+  else if (key === 'car')   initCar(area);
+  else if (key === 'jump')  initJump(area);
+  else if (key === 'chess') initChess(area);
+  else if (key === 'ludo')  initLudo(area);
+}
+
+function goBack() {
+  stopAllGames();
+  document.getElementById('gameScreen').classList.remove('active');
+  document.getElementById('menuScreen').classList.add('active');
+  currentGame = null;
+}
+
+function setScore(s) { document.getElementById('scoreDisplay').textContent = s; }
+
+function stopAllGames() {
+  clearInterval(snakeTimer);
+  cancelAnimationFrame(carRaf);
+  cancelAnimationFrame(jumpRaf);
+  snakeTimer = null; carRaf = null; jumpRaf = null;
+}
+
+// ══════════════════════════════════════════════════════
+//  1. SNAKE
+// ══════════════════════════════════════════════════════
+let snakeTimer = null;
+
+function initSnake(area) {
+  const SIZE = Math.min(window.innerWidth - 32, 320);
+  const COLS = 20, ROWS = 20, CELL = SIZE / COLS;
+  let snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  let dir = {x:1,y:0}, nextDir = {x:1,y:0};
+  let food = randomFood();
+  let score = 0, running = false;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+
+  const wrap = document.createElement('div');
+  wrap.style.position = 'relative';
+  wrap.appendChild(canvas);
+
+  // overlay
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<h2 style="color:#39ff14">SNAKE</h2><p>Tap to Start</p><button class="btn-action" id="snakeStart">▶ START</button>`;
+  wrap.appendChild(ov);
+
+  // dpad
+  const dpad = makeDpad();
+  dpad.addEventListener('dir', e => nextDir = e.detail);
+
+  area.appendChild(wrap);
+  area.appendChild(dpad);
+  area.insertAdjacentHTML('beforeend', '<div class="swipe-hint">Swipe or use arrows to move</div>');
+
+  document.getElementById('snakeStart').onclick = startSnake;
+
+  // swipe
+  let tx=0,ty=0;
+  canvas.addEventListener('touchstart', e => { tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+  canvas.addEventListener('touchend', e => {
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if (!running) { startSnake(); return; }
+    if (Math.abs(dx)>Math.abs(dy)) nextDir = dx>0 ? {x:1,y:0}:{x:-1,y:0};
+    else nextDir = dy>0 ? {x:0,y:1}:{x:0,y:-1};
+  }, {passive:true});
+
+  function randomFood() {
+    return { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) };
+  }
+
+  function startSnake() {
+    ov.style.display = 'none';
+    snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    dir = {x:1,y:0}; nextDir = {x:1,y:0};
+    food = randomFood(); score = 0; running = true;
+    setScore(0);
+    clearInterval(snakeTimer);
+    snakeTimer = setInterval(tick, 130);
+  }
+
+  function tick() {
+    if (!running) return;
+    // block reverse
+    if (!(nextDir.x === -dir.x && nextDir.y === -dir.y)) dir = {...nextDir};
+    const head = { x: (snake[0].x + dir.x + COLS) % COLS, y: (snake[0].y + dir.y + ROWS) % ROWS };
+    if (snake.some(s => s.x===head.x && s.y===head.y)) { gameOver(); return; }
+    snake.unshift(head);
+    if (head.x===food.x && head.y===food.y) { score++; setScore(score); food = randomFood(); } else snake.pop();
+    draw();
+  }
+
+  function draw() {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0,0,SIZE,SIZE);
+    // grid subtle
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 0.5;
+    for (let i=0;i<=COLS;i++) { ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,SIZE); ctx.stroke(); }
+    for (let j=0;j<=ROWS;j++) { ctx.beginPath(); ctx.moveTo(0,j*CELL); ctx.lineTo(SIZE,j*CELL); ctx.stroke(); }
+    // food
+    ctx.fillStyle = '#ff006e';
+    ctx.shadowColor = '#ff006e';
+    ctx.shadowBlur = 10;
+    ctx.fillRect(food.x*CELL+1, food.y*CELL+1, CELL-2, CELL-2);
+    ctx.shadowBlur = 0;
+    // snake
+    snake.forEach((s,i) => {
+      ctx.fillStyle = i===0 ? '#39ff14' : `hsl(${140-i*3},100%,${50-i*0.8}%)`;
+      ctx.shadowColor = i===0 ? '#39ff14' : 'transparent';
+      ctx.shadowBlur = i===0 ? 8 : 0;
+      const r = CELL-2;
+      ctx.beginPath();
+      ctx.roundRect(s.x*CELL+1, s.y*CELL+1, r, r, 3);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  function gameOver() {
+    running = false;
+    clearInterval(snakeTimer);
+    ov.style.display = 'flex';
+    ov.innerHTML = `<h2 style="color:#ff006e">GAME OVER</h2><p>Score: ${score}</p><button class="btn-action" id="snakeStart">▶ RETRY</button>`;
+    document.getElementById('snakeStart').onclick = startSnake;
+  }
+
+  draw();
+}
+
+// ══════════════════════════════════════════════════════
+//  2. CAR RACING
+// ══════════════════════════════════════════════════════
+let carRaf = null;
+
+function initCar(area) {
+  const W = Math.min(window.innerWidth - 32, 320);
+  const H = Math.min(window.innerHeight - 160, 480);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  let player = { x: W/2, y: H-80, w: 30, h: 50, speed: 5 };
+  let obstacles = [], particles = [];
+  let score = 0, speed = 3, frame = 0, running = false;
+  let roadOffset = 0;
+  let leftHeld = false, rightHeld = false;
+
+  const wrap = document.createElement('div');
+  wrap.style.position = 'relative';
+  wrap.appendChild(canvas);
+  const ov = createOverlay('🏎️ CAR RACE', 'Avoid other cars!', startCar);
+  ov.id = 'carOv';
+  wrap.appendChild(ov);
+
+  // buttons
+  const ctrlDiv = document.createElement('div');
+  ctrlDiv.style.cssText = 'display:flex;gap:20px;margin-top:12px;';
+  const lBtn = makeBtn('◀', 60);
+  const rBtn = makeBtn('▶', 60);
+  ctrlDiv.appendChild(lBtn); ctrlDiv.appendChild(rBtn);
+
+  function makeBtn(t, s) {
+    const b = document.createElement('button');
+    b.textContent = t;
+    b.style.cssText = `width:${s}px;height:${s}px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;font-size:22px;border-radius:12px;cursor:pointer;`;
+    return b;
+  }
+
+  lBtn.addEventListener('touchstart', e => { e.preventDefault(); leftHeld=true; }, {passive:false});
+  lBtn.addEventListener('touchend', () => leftHeld=false);
+  rBtn.addEventListener('touchstart', e => { e.preventDefault(); rightHeld=true; }, {passive:false});
+  rBtn.addEventListener('touchend', () => rightHeld=false);
+
+  // swipe / touch drag
+  let touchX = null;
+  canvas.addEventListener('touchstart', e => { if (!running) startCar(); touchX = e.touches[0].clientX; }, {passive:true});
+  canvas.addEventListener('touchmove', e => {
+    if (touchX===null) return;
+    const dx = e.touches[0].clientX - touchX;
+    player.x = Math.max(30, Math.min(W-30, player.x + dx));
+    touchX = e.touches[0].clientX;
+  }, {passive:true});
+
+  area.appendChild(wrap);
+  area.appendChild(ctrlDiv);
+
+  function startCar() {
+    document.getElementById('carOv').style.display='none';
+    player.x = W/2; obstacles = []; particles = [];
+    score = 0; speed = 3; frame = 0; running = true;
+    setScore(0);
+    if (carRaf) cancelAnimationFrame(carRaf);
+    loop();
+  }
+
+  function spawnObstacle() {
+    const lane = Math.random();
+    const colors = ['#ff4444','#4488ff','#ffaa00','#aa44ff'];
+    obstacles.push({
+      x: 20 + Math.random()*(W-60),
+      y: -60, w: 28, h: 50,
+      color: colors[Math.floor(Math.random()*colors.length)]
+    });
+  }
+
+  function loop() {
+    frame++;
+    if (leftHeld)  player.x = Math.max(30, player.x - player.speed);
+    if (rightHeld) player.x = Math.min(W-30, player.x + player.speed);
+
+    if (frame % Math.max(40, 80-score/5) === 0) spawnObstacle();
+    if (frame % 60 === 0) { score++; speed = Math.min(12, 3 + score*0.15); setScore(score); }
+
+    roadOffset = (roadOffset + speed) % 80;
+    obstacles.forEach(o => o.y += speed);
+
+    // collision
+    for (const o of obstacles) {
+      if (Math.abs(o.x-player.x)<(o.w+player.w)/2 && Math.abs(o.y-player.y)<(o.h+player.h)/2) {
+        running = false;
+        const ov2 = document.getElementById('carOv');
+        ov2.style.display='flex';
+        ov2.innerHTML = `<h2 style="color:#ff006e">CRASHED!</h2><p>Score: ${score}</p><button class="btn-action" id="carStart">▶ RETRY</button>`;
+        document.getElementById('carStart').onclick = startCar;
+        return;
+      }
+    }
+    obstacles = obstacles.filter(o => o.y < H+80);
+
+    draw();
+    carRaf = requestAnimationFrame(loop);
+  }
+
+  function draw() {
+    // road
+    ctx.fillStyle = '#1a2030';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#243040';
+    const roadX = W/2-70, roadW = 140;
+    ctx.fillRect(roadX, 0, roadW, H);
+    // road lines
+    ctx.strokeStyle = '#ffffff22';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([30,50]);
+    ctx.lineDashOffset = -roadOffset;
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+    ctx.setLineDash([]);
+    // obstacles
+    obstacles.forEach(o => {
+      ctx.fillStyle = o.color;
+      ctx.shadowColor = o.color;
+      ctx.shadowBlur = 8;
+      drawCar(ctx, o.x, o.y, o.w, o.h, o.color);
+    });
+    ctx.shadowBlur = 0;
+    // player
+    ctx.shadowColor = '#00f5ff';
+    ctx.shadowBlur = 12;
+    drawCar(ctx, player.x, player.y, player.w, player.h, '#00f5ff');
+    ctx.shadowBlur = 0;
+  }
+
+  function drawCar(ctx, x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x-w/2, y-h/2, w, h, 5);
+    ctx.fill();
+    ctx.fillStyle = '#00000066';
+    ctx.fillRect(x-w/2+3, y-h/2+6, w-6, 10);
+    ctx.fillRect(x-w/2+3, y+h/2-16, w-6, 10);
+    ctx.fillStyle = '#ffee44';
+    ctx.fillRect(x-w/2, y-h/2, 7, 5);
+    ctx.fillRect(x+w/2-7, y-h/2, 7, 5);
+  }
+}
+
+function createOverlay(title, sub, cb) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<h2>${title}</h2><p>${sub}</p><button class="btn-action">▶ START</button>`;
+  ov.querySelector('button').onclick = cb;
+  return ov;
+}
+
+// ══════════════════════════════════════════════════════
+//  3. JUMP BALL (Flappy-style)
+// ══════════════════════════════════════════════════════
+let jumpRaf = null;
+
+function initJump(area) {
+  const W = Math.min(window.innerWidth - 32, 320);
+  const H = Math.min(window.innerHeight - 160, 450);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  let ball, pipes, score, frame, running, vy;
+  const GRAVITY = 0.45, JUMP = -8, PIPE_W = 40, GAP = 110;
+  let bgOffset = 0;
+
+  const wrap = document.createElement('div');
+  wrap.style.position = 'relative';
+  wrap.appendChild(canvas);
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.id = 'jumpOv';
+  ov.innerHTML = `<h2 style="color:#00f5ff">JUMP BALL</h2><p>Tap to jump!</p><button class="btn-action" id="jumpStart">▶ START</button>`;
+  wrap.appendChild(ov);
+  area.appendChild(wrap);
+  area.insertAdjacentHTML('beforeend', '<div class="swipe-hint">Tap anywhere to jump</div>');
+
+  document.getElementById('jumpStart').onclick = startJump;
+  canvas.addEventListener('click', () => { if (!running) startJump(); else doJump(); });
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); if (!running) startJump(); else doJump(); }, {passive:false});
+
+  function startJump() {
+    document.getElementById('jumpOv').style.display='none';
+    ball = {x: 60, y: H/2, r: 16};
+    pipes = []; vy = 0; score = 0; frame = 0; running = true;
+    setScore(0);
+    if (jumpRaf) cancelAnimationFrame(jumpRaf);
+    loop();
+  }
+
+  function doJump() { vy = JUMP; }
+
+  function loop() {
+    frame++;
+    bgOffset = (bgOffset + 1) % W;
+
+    vy += GRAVITY;
+    ball.y += vy;
+
+    if (frame % 90 === 0) {
+      const topH = 60 + Math.random()*(H-GAP-120);
+      pipes.push({x: W, top: topH, passed: false});
+    }
+
+    for (const p of pipes) {
+      p.x -= 2.8;
+      if (!p.passed && p.x + PIPE_W < ball.x) { p.passed = true; score++; setScore(score); }
+      if (collide(ball, p)) { over(); return; }
+    }
+    pipes = pipes.filter(p => p.x > -PIPE_W-10);
+
+    if (ball.y + ball.r > H || ball.y - ball.r < 0) { over(); return; }
+
+    draw();
+    jumpRaf = requestAnimationFrame(loop);
+  }
+
+  function collide(b, p) {
+    const inX = b.x+b.r > p.x && b.x-b.r < p.x+PIPE_W;
+    if (!inX) return false;
+    return b.y-b.r < p.top || b.y+b.r > p.top+GAP;
+  }
+
+  function draw() {
+    // sky gradient
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'#0a0a1a'); grad.addColorStop(1,'#0d1f3c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+
+    // stars
+    ctx.fillStyle = '#ffffff33';
+    for (let i=0;i<20;i++) {
+      ctx.fillRect((i*97+bgOffset)%W, (i*53)%H*0.6, 1.5, 1.5);
+    }
+
+    // pipes
+    pipes.forEach(p => {
+      const g1 = ctx.createLinearGradient(p.x,0,p.x+PIPE_W,0);
+      g1.addColorStop(0,'#1a4d2e'); g1.addColorStop(0.5,'#39ff14'); g1.addColorStop(1,'#1a4d2e');
+      ctx.fillStyle = g1;
+      ctx.fillRect(p.x, 0, PIPE_W, p.top);
+      ctx.fillRect(p.x, p.top+GAP, PIPE_W, H-p.top-GAP);
+      // cap
+      ctx.fillStyle = '#2aff20';
+      ctx.fillRect(p.x-4, p.top-12, PIPE_W+8, 12);
+      ctx.fillRect(p.x-4, p.top+GAP, PIPE_W+8, 12);
+    });
+
+    // ball
+    const tilt = Math.min(Math.max(vy/10,-1),1)*0.4;
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.rotate(tilt);
+    ctx.shadowColor = '#00f5ff';
+    ctx.shadowBlur = 14;
+    const bg = ctx.createRadialGradient(-4,-4,2,0,0,ball.r);
+    bg.addColorStop(0,'#ffffff');
+    bg.addColorStop(0.4,'#00f5ff');
+    bg.addColorStop(1,'#0055aa');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0,0,ball.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // basketball lines
+    ctx.strokeStyle = '#00000055';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0,0,ball.r,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function over() {
+    running = false;
+    const ov2 = document.getElementById('jumpOv');
+    ov2.style.display='flex';
+    ov2.innerHTML = `<h2 style="color:#ff006e">GAME OVER</h2><p>Score: ${score}</p><button class="btn-action" id="jumpStart">▶ RETRY</button>`;
+    document.getElementById('jumpStart').onclick = startJump;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  4. CHESS (vs simple AI)
+// ══════════════════════════════════════════════════════
+function initChess(area) {
+  const SIZE = Math.min(window.innerWidth - 32, 320);
+  const CELL = Math.floor(SIZE / 8);
+  const canvas = document.createElement('canvas');
+  canvas.width = CELL*8; canvas.height = CELL*8;
+  canvas.className = 'chess-board-wrap';
+  const ctx = canvas.getContext('2d');
+
+  const PIECES = {
+    'wK':'♔','wQ':'♕','wR':'♖','wB':'♗','wN':'♘','wP':'♙',
+    'bK':'♚','bQ':'♛','bR':'♜','bB':'♝','bN':'♞','bP':'♟'
+  };
+
+  let board = initBoard();
+  let selected = null, turn = 'w', validMoves = [];
+  let statusEl;
+
+  function initBoard() {
+    const b = Array(8).fill(null).map(()=>Array(8).fill(null));
+    const order = ['R','N','B','Q','K','B','N','R'];
+    order.forEach((p,i)=>{ b[0][i]='b'+p; b[7][i]='w'+p; });
+    for(let i=0;i<8;i++){b[1][i]='bP';b[6][i]='wP';}
+    return b;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;';
+
+  statusEl = document.createElement('div');
+  statusEl.style.cssText='font-family:Orbitron,monospace;font-size:12px;color:#94a3b8;letter-spacing:1px;';
+  statusEl.textContent = 'YOUR TURN (WHITE)';
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'btn-action';
+  resetBtn.textContent = '↺ NEW GAME';
+  resetBtn.style.marginTop='4px';
+  resetBtn.onclick = () => { board=initBoard(); selected=null; turn='w'; validMoves=[]; statusEl.textContent='YOUR TURN (WHITE)'; draw(); };
+
+  wrap.appendChild(canvas);
+  wrap.appendChild(statusEl);
+  wrap.appendChild(resetBtn);
+  area.appendChild(wrap);
+
+  canvas.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    const col = Math.floor((e.clientX-rect.left)/CELL);
+    const row = Math.floor((e.clientY-rect.top)/CELL);
+    handleClick(row, col);
+  });
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const col = Math.floor((e.touches[0].clientX-rect.left)/CELL);
+    const row = Math.floor((e.touches[0].clientY-rect.top)/CELL);
+    handleClick(row, col);
+  }, {passive:false});
+
+  function handleClick(row, col) {
+    if (turn !== 'w') return;
+    const piece = board[row][col];
+    if (selected) {
+      const move = validMoves.find(m=>m.r===row&&m.c===col);
+      if (move) {
+        makeMove(selected.r, selected.c, row, col);
+        selected = null; validMoves = [];
+        if (!isGameOver()) { turn='b'; statusEl.textContent='AI IS THINKING...'; draw(); setTimeout(aiMove,400); }
+        return;
+      }
+      selected = null; validMoves = [];
+    }
+    if (piece && piece[0]==='w') {
+      selected = {r:row,c:col};
+      validMoves = getLegalMoves(row,col,'w');
+    }
+    draw();
+  }
+
+  function makeMove(r1,c1,r2,c2) {
+    const p=board[r1][c1];
+    board[r2][c2]=p; board[r1][c1]=null;
+    // pawn promotion
+    if(p==='wP'&&r2===0) board[r2][c2]='wQ';
+    if(p==='bP'&&r2===7) board[r2][c2]='bQ';
+    setScore(turn==='w'?'W move':'B move');
+  }
+
+  function getLegalMoves(r,c,color) {
+    const piece=board[r][c]; if(!piece) return [];
+    const type=piece[1]; const moves=[];
+    const opp=color==='w'?'b':'w';
+    const add=(nr,nc)=>{
+      if(nr<0||nr>7||nc<0||nc>7) return false;
+      if(board[nr][nc]&&board[nr][nc][0]===color) return false;
+      moves.push({r:nr,c:nc}); return !board[nr][nc];
+    };
+    const slide=(dr,dc)=>{ let nr=r+dr,nc=c+dc; while(add(nr,nc)){nr+=dr;nc+=dc;} };
+    if(type==='P'){
+      const d=color==='w'?-1:1;
+      if(!board[r+d]?.[c]) { add(r+d,c); if((color==='w'&&r===6||color==='b'&&r===1)&&!board[r+2*d]?.[c]) add(r+2*d,c); }
+      [[d,-1],[d,1]].forEach(([dr,dc])=>{ if(board[r+dr]?.[c+dc]?.[0]===opp) moves.push({r:r+dr,c:c+dc}); });
+    }
+    if(type==='N') [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>add(r+dr,c+dc));
+    if(type==='R'||type==='Q') { slide(1,0);slide(-1,0);slide(0,1);slide(0,-1); }
+    if(type==='B'||type==='Q') { slide(1,1);slide(1,-1);slide(-1,1);slide(-1,-1); }
+    if(type==='K') [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>add(r+dr,c+dc));
+    return moves;
+  }
+
+  function aiMove() {
+    // simple: capture highest value piece, else random legal move
+    const vals={'K':100,'Q':9,'R':5,'B':3,'N':3,'P':1};
+    let best=null, bestVal=-1;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+      if(board[r][c]?.[0]==='b') {
+        getLegalMoves(r,c,'b').forEach(m=>{
+          const target=board[m.r][m.c];
+          const val=target?vals[target[1]]||0:0;
+          if(val>bestVal||(val===bestVal&&Math.random()<0.3)){bestVal=val;best={r,c,m};}
+        });
+      }
+    }
+    if(!best){
+      // pick any
+      for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+        if(board[r][c]?.[0]==='b'){const mv=getLegalMoves(r,c,'b');if(mv.length){best={r,c,m:mv[Math.floor(Math.random()*mv.length)]};break;}}
+        if(best) break;
+      }
+    }
+    if(best){ makeMove(best.r,best.c,best.m.r,best.m.c); }
+    turn='w';
+    if(!isGameOver()) statusEl.textContent='YOUR TURN (WHITE)';
+    draw();
+  }
+
+  function isGameOver() {
+    let wK=false,bK=false;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) { if(board[r][c]==='wK')wK=true; if(board[r][c]==='bK')bK=true; }
+    if(!wK){statusEl.textContent='❌ YOU LOST!'; return true;}
+    if(!bK){statusEl.textContent='🏆 YOU WIN!'; return true;}
+    return false;
+  }
+
+  function draw() {
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+      const light=(r+c)%2===0;
+      ctx.fillStyle = light?'#f0d9b5':'#b58863';
+      ctx.fillRect(c*CELL,r*CELL,CELL,CELL);
+      if(selected&&selected.r===r&&selected.c===c){
+        ctx.fillStyle='#00f5ff55'; ctx.fillRect(c*CELL,r*CELL,CELL,CELL);
+      }
+      if(validMoves.find(m=>m.r===r&&m.c===c)){
+        ctx.fillStyle='#39ff1455'; ctx.fillRect(c*CELL,r*CELL,CELL,CELL);
+        ctx.beginPath(); ctx.arc(c*CELL+CELL/2,r*CELL+CELL/2,CELL/5,0,Math.PI*2);
+        ctx.fillStyle='#39ff1488'; ctx.fill();
+      }
+      const p=board[r][c];
+      if(p){
+        ctx.font=`${CELL-8}px serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.shadowColor=p[0]==='w'?'#ffffffaa':'#00000077';
+        ctx.shadowBlur=4;
+        ctx.fillText(PIECES[p]||'?',c*CELL+CELL/2,r*CELL+CELL/2+1);
+        ctx.shadowBlur=0;
+      }
+    }
+  }
+  draw();
+}
+
+// ══════════════════════════════════════════════════════
+//  5. LUDO (2-player: You vs CPU)
+// ══════════════════════════════════════════════════════
+function initLudo(area) {
+  const SIZE = Math.min(window.innerWidth - 32, 320);
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  const C = SIZE / 15;
+
+  // Ludo path (simplified 52-step outer track, start from col index)
+  // We implement a visual board + dice + token movement
+  const COLORS = {red:'#ff4444', blue:'#4488ff', green:'#39ff14', yellow:'#ffdd00'};
+
+  // Tokens: 4 for player (blue), 4 for CPU (red)
+  let tokens = {
+    blue:  [{pos:-1,home:false},{pos:-1,home:false},{pos:-1,home:false},{pos:-1,home:false}],
+    red:   [{pos:-1,home:false},{pos:-1,home:false},{pos:-1,home:false},{pos:-1,home:false}],
+  };
+  let dice = 0, turn = 'blue', rolling = false, msg = '';
+  let score = 0;
+
+  const TRACK_LEN = 52;
+  const START = {blue:0, red:26};
+  const HOME_ENTER = {blue:50, red:24};
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;';
+
+  const infoEl = document.createElement('div');
+  infoEl.id = 'ludoInfo';
+  infoEl.textContent = 'Roll the dice!';
+
+  const rollBtn = document.createElement('button');
+  rollBtn.className = 'btn-action';
+  rollBtn.textContent = '🎲 Roll Dice';
+  rollBtn.style.marginTop='4px';
+
+  wrap.appendChild(canvas);
+  wrap.appendChild(infoEl);
+  wrap.appendChild(rollBtn);
+  area.appendChild(wrap);
+
+  rollBtn.onclick = () => {
+    if (rolling || turn!=='blue') return;
+    rollDice();
+  };
+
+  function rollDice() {
+    rolling=true; rollBtn.disabled=true;
+    let flashes=0;
+    const iv=setInterval(()=>{
+      dice=Math.floor(Math.random()*6)+1;
+      draw(); flashes++;
+      if(flashes>=8){ clearInterval(iv); rolling=false; afterRoll(); }
+    },80);
+  }
+
+  function afterRoll() {
+    const t=tokens[turn];
+    const canMove=t.some(tk=> tk.pos===-1 ? dice===6 : !tk.home);
+    if(!canMove){
+      msg=`${turn.toUpperCase()}: No moves! Dice=${dice}`;
+      infoEl.textContent=msg;
+      nextTurn();
+      return;
+    }
+    if(turn==='blue'){
+      // auto pick: move first eligible
+      const idx=t.findIndex(tk=> tk.pos===-1 ? dice===6 : !tk.home);
+      if(idx>=0) moveToken(turn,idx);
+    }
+  }
+
+  function moveToken(color, idx) {
+    const t = tokens[color];
+    if(t[idx].pos===-1){ if(dice===6) t[idx].pos=START[color]; }
+    else { t[idx].pos=(t[idx].pos+dice)%TRACK_LEN; if(t[idx].pos===HOME_ENTER[color]) t[idx].home=true; }
+    score = tokens.blue.filter(x=>x.home).length;
+    setScore('You:'+score);
+    msg=`${color.toUpperCase()} moved! Dice=${dice}`;
+    infoEl.textContent=msg;
+    draw();
+    checkWin();
+    if(dice!==6) nextTurn(); else { if(turn==='blue'){rollBtn.disabled=false;infoEl.textContent='Dice=6! Roll again!';} else {setTimeout(cpuTurn,600);} }
+  }
+
+  function nextTurn() {
+    turn = turn==='blue'?'red':'blue';
+    rollBtn.disabled = turn!=='blue';
+    if(turn==='red') setTimeout(cpuTurn, 800);
+    else infoEl.textContent='Your turn! Roll the dice.';
+  }
+
+  function cpuTurn() {
+    dice=Math.floor(Math.random()*6)+1;
+    draw();
+    const t=tokens.red;
+    const idx=t.findIndex(tk=> tk.pos===-1?dice===6:!tk.home);
+    if(idx>=0) moveToken('red',idx);
+    else { msg='CPU: No moves!'; infoEl.textContent=msg; nextTurn(); }
+  }
+
+  function checkWin() {
+    if(tokens.blue.every(t=>t.home)){infoEl.textContent='🏆 YOU WIN!';rollBtn.disabled=true;return true;}
+    if(tokens.red.every(t=>t.home)){infoEl.textContent='❌ CPU WINS!';rollBtn.disabled=true;return true;}
+    return false;
+  }
+
+  // TRACK positions mapped to canvas coords (simplified circular path)
+  function trackPos(step) {
+    // 52 steps around the board; map to pixel (approximate outer ring)
+    const s = step % 52;
+    const seg = Math.floor(s / 13);
+    const off = s % 13;
+    const m = C;
+    const brd = SIZE;
+    if(seg===0) return {x: 6*m + off*m,  y: 14*m}; // bottom row L→R
+    if(seg===1) return {x: 14*m,          y: 14*m - off*m}; // right col bottom→top
+    if(seg===2) return {x: 14*m - off*m,  y: m};   // top row R→L
+    if(seg===3) return {x: m,             y: m + off*m};    // left col top→bottom
+    return {x:SIZE/2,y:SIZE/2};
+  }
+
+  function draw() {
+    // background
+    ctx.fillStyle='#1a1a2e';
+    ctx.fillRect(0,0,SIZE,SIZE);
+
+    // Board grid (15x15)
+    for(let r=0;r<15;r++) for(let c=0;c<15;c++){
+      let fill='#fff';
+      if((r<6&&c<6)||(r<6&&c>8)||(r>8&&c<6)||(r>8&&c>8)) fill='#e8e8e8';
+      ctx.fillStyle=fill;
+      ctx.fillRect(c*C,r*C,C,C);
+      ctx.strokeStyle='#ccc'; ctx.lineWidth=0.5;
+      ctx.strokeRect(c*C,r*C,C,C);
+    }
+
+    // Home bases
+    const bases=[
+      {x:0,y:0,w:6,h:6,c:COLORS.red},
+      {x:9,y:0,w:6,h:6,c:COLORS.green},
+      {x:0,y:9,w:6,h:6,c:COLORS.blue},
+      {x:9,y:9,w:6,h:6,c:COLORS.yellow},
+    ];
+    bases.forEach(b=>{
+      ctx.fillStyle=b.c;
+      ctx.fillRect(b.x*C,b.y*C,b.w*C,b.h*C);
+      // inner white
+      ctx.fillStyle='#ffffffcc';
+      ctx.beginPath();
+      ctx.arc((b.x+b.w/2)*C,(b.y+b.h/2)*C,C*1.8,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    // Center home triangle
+    const cx=SIZE/2, cy=SIZE/2;
+    [[COLORS.red,cx,cy-3*C,cx-3*C,cy+1*C,cx+3*C,cy+1*C],
+     [COLORS.blue,cx,cy+3*C,cx-3*C,cy-1*C,cx+3*C,cy-1*C],
+     [COLORS.green,cx+3*C,cy,cx-1*C,cy-3*C,cx-1*C,cy+3*C],
+     [COLORS.yellow,cx-3*C,cy,cx+1*C,cy-3*C,cx+1*C,cy+3*C],
+    ].forEach(([c,...pts])=>{
+      ctx.beginPath(); ctx.moveTo(pts[0],pts[1]); ctx.lineTo(pts[2],pts[3]); ctx.lineTo(pts[4],pts[5]); ctx.closePath();
+      ctx.fillStyle=c; ctx.fill();
+    });
+
+    // Draw tokens
+    const blueBase=[{x:1.5,y:10.5},{x:3.5,y:10.5},{x:1.5,y:12.5},{x:3.5,y:12.5}];
+    const redBase= [{x:1.5,y:1.5},{x:3.5,y:1.5},{x:1.5,y:3.5},{x:3.5,y:3.5}];
+    tokens.blue.forEach((t,i)=>{
+      const pos = t.pos===-1 ? blueBase[i] : trackPos(t.pos);
+      const px = t.pos===-1 ? pos.x*C : pos.x;
+      const py = t.pos===-1 ? pos.y*C : pos.y;
+      ctx.beginPath();
+      ctx.arc(px, py, C*0.38, 0, Math.PI*2);
+      ctx.fillStyle = t.home?'#00ff88':COLORS.blue;
+      ctx.shadowColor=COLORS.blue; ctx.shadowBlur=8;
+      ctx.fill(); ctx.shadowBlur=0;
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+    tokens.red.forEach((t,i)=>{
+      const pos = t.pos===-1 ? redBase[i] : trackPos((t.pos+26)%52);
+      const px = t.pos===-1 ? pos.x*C : pos.x;
+      const py = t.pos===-1 ? pos.y*C : pos.y;
+      ctx.beginPath();
+      ctx.arc(px, py, C*0.38, 0, Math.PI*2);
+      ctx.fillStyle = t.home?'#ff88aa':COLORS.red;
+      ctx.shadowColor=COLORS.red; ctx.shadowBlur=8;
+      ctx.fill(); ctx.shadowBlur=0;
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+
+    // Dice
+    if(dice>0){
+      ctx.fillStyle='#fff';
+      ctx.shadowColor='#fff'; ctx.shadowBlur=10;
+      ctx.beginPath();
+      ctx.roundRect(SIZE-44, SIZE-44, 36, 36, 6);
+      ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle='#111';
+      ctx.font='bold 18px Orbitron,monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(['','1','2','3','4','5','6'][dice], SIZE-26, SIZE-26);
+    }
+  }
+
+  draw();
+  rollBtn.disabled=false;
+}
+
+// ══════════════════════════════════════════════════════
+//  DPAD HELPER
+// ══════════════════════════════════════════════════════
+function makeDpad() {
+  const wrap = document.createElement('div');
+  wrap.className = 'controls';
+  wrap.style.marginTop='12px';
+  const grid = document.createElement('div');
+  grid.className = 'dpad';
+
+  const btns = [
+    {r:0,c:1,t:'▲',dir:{x:0,y:-1}},{r:1,c:0,t:'◀',dir:{x:-1,y:0}},
+    {r:1,c:2,t:'▶',dir:{x:1,y:0}},{r:2,c:1,t:'▼',dir:{x:0,y:1}}
+  ];
+
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++){
+    const d = document.createElement('div');
+    const btn = btns.find(b=>b.r===r&&b.c===c);
+    if(btn){
+      d.className='dpad-btn';
+      d.textContent=btn.t;
+      const emit=()=>{ const ev=new CustomEvent('dir',{detail:btn.dir,bubbles:true}); wrap.dispatchEvent(ev); };
+      d.addEventListener('touchstart',e=>{e.preventDefault();d.classList.add('pressed');emit();},{passive:false});
+      d.addEventListener('touchend',()=>d.classList.remove('pressed'));
+      d.addEventListener('click',emit);
+    } else {
+      d.style.visibility='hidden';
+    }
+    grid.appendChild(d);
+  }
+
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+// ── keyboard (snake fallback on desktop) ──
+document.addEventListener('keydown', e => {
+  const map={'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0}};
+  if(map[e.key]) { const ev=new CustomEvent('dir',{detail:map[e.key],bubbles:true}); document.dispatchEvent(ev); }
+});
+</script>
+</body>
+</html>
